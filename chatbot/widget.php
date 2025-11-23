@@ -236,11 +236,32 @@ function handleQuickReply(action) {
 }
 
 function sendMessage() {
+  console.log('Sending message');
   const input = document.getElementById('chatInput');
   const message = input.value.trim();
+
+  console.log('Sending message:', message);
+  console.log('Current Session ID:', userId);
   
   if (!message) return;
   if (!currentSessionId) initializeChatSession();
+
+  // Save message to database via Fetch API
+  fetch('../chatbot/api.php?action=save_message', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      user_id: userId || 0,
+      chat: message
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('Message saved:', data);
+  })
+  .catch(error => {
+    console.error('Error saving message:', error);
+  });
 
   addMessage(message, 'user');
   input.value = '';
