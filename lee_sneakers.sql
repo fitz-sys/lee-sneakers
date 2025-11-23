@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 23, 2025 at 11:10 AM
+-- Generation Time: Nov 23, 2025 at 02:57 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -74,11 +74,24 @@ CREATE TABLE `cart` (
 
 CREATE TABLE `chat` (
   `id` int(250) NOT NULL,
-  `user_id` int(250) NOT NULL,
-  `receiver_id` int(250) NOT NULL,
+  `username` varchar(250) NOT NULL,
+  `receiver` varchar(250) NOT NULL,
   `chat` text NOT NULL,
   `created_at` datetime NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `chat`
+--
+
+INSERT INTO `chat` (`id`, `username`, `receiver`, `chat`, `created_at`) VALUES
+(10, 'admin', 'BATO', 'test from admin', '2025-11-23 21:27:40'),
+(11, 'BATO', 'admin', 'test from user', '2025-11-23 21:28:21'),
+(12, 'admin', 'BATO', 'test', '2025-11-23 21:37:56'),
+(13, 'admin', 'BATO', 'test test', '2025-11-23 21:45:05'),
+(14, 'BATO', 'admin', 'test', '2025-11-23 21:45:18'),
+(15, 'BATO', 'admin', 'test', '2025-11-23 21:50:54'),
+(16, 'admin', 'BATO', 'test bato', '2025-11-23 21:51:23');
 
 -- --------------------------------------------------------
 
@@ -536,7 +549,7 @@ ALTER TABLE `cart`
 -- AUTO_INCREMENT for table `chat`
 --
 ALTER TABLE `chat`
-  MODIFY `id` int(250) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(250) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
 
 --
 -- AUTO_INCREMENT for table `orders`
