@@ -76,7 +76,7 @@ $conn->query("
       <div class="message bot">
         <div class="message-content">
           <div class="greeting-icon">👋</div>
-          <div class="greeting-title">Chat with</div>
+          <div class="greeting-title">Chat with us</div>
           <div class="greeting-text">Hi, message us with any questions. We're happy to help!</div>
         </div>
       </div>
