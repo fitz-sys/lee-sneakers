@@ -211,6 +211,380 @@ for ($i = 6; $i >= 0; $i--) {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Chat Widget CSS -->
+    <style>
+        .chatbot-widget {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            z-index: 9999;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            transition: all 0.3s ease;
+        }
+
+        .chat-bubble-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: #FEC700;
+            color: #000435;
+            border: none;
+            cursor: pointer;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(254, 199, 0, 0.4);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chat-bubble-btn:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 16px rgba(254, 199, 0, 0.6);
+        }
+
+        .chat-bubble-btn.active {
+            display: flex;
+            background: #000435;
+            color: #FEC700;
+            transform: rotate(90deg);
+        }
+
+        .chat-window {
+            position: fixed;
+            bottom: 100px;
+            right: 30px;
+            width: 380px;
+            height: 600px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            animation: slideUp 0.3s ease;
+            z-index: 1040;
+            max-height: calc(100vh - 150px);
+        }
+
+        .chat-window.active {
+            display: flex;
+        }
+
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .chat-header {
+            background: #FEC700;
+            color: #000435;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #f0c800;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+
+        .chat-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 700;
+            flex: 1;
+            text-align: center;
+        }
+
+        .chat-close-btn {
+            background: none;
+            border: none;
+            color: #000435;
+            font-size: 20px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .chat-close-btn:hover {
+            transform: scale(1.2);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            background: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            display: flex;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.bot {
+            justify-content: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.4;
+            word-wrap: break-word;
+        }
+
+        .bot .message-content {
+            background: #e8e8e8;
+            color: #333;
+        }
+
+        .user .message-content {
+            background: #FEC700;
+            color: #000435;
+            font-weight: 500;
+        }
+
+        .chat-input-section {
+            padding: 12px;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .chat-input {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            padding: 10px 12px;
+            font-size: 13px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .chat-input:focus {
+            border-color: #FEC700;
+        }
+
+        .chat-send-btn {
+            background: #FEC700;
+            color: #000435;
+            border: none;
+            border-radius: 6px;
+            padding: 10px 14px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .chat-send-btn:hover {
+            background: #f0c800;
+            transform: translateY(-2px);
+        }
+    </style>
+    
+    <script>
+        // Chat variables
+        const adminUsername = '<?php echo $_SESSION['username']; ?>';
+        const isAdminUser = true;
+
+        // Add Message to Chat
+        function addMessage(text, sender) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.innerHTML = text.replace(/\n/g, '<br>');
+
+            messageDiv.appendChild(contentDiv);
+            chatMessages.appendChild(messageDiv);
+
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Toggle Chat
+        function toggleChat() {
+            const chatWindow = document.getElementById('chatWindow');
+            const chatBubbleBtn = document.getElementById('chatBubbleBtn');
+            
+            if (chatWindow.classList.contains('active')) {
+                chatWindow.classList.remove('active');
+                chatBubbleBtn.classList.remove('active');
+            } else {
+                chatWindow.classList.add('active');
+                chatBubbleBtn.classList.add('active');
+                fetchChatMessages();
+            }
+        }
+
+        // Fetch Chat Messages
+        function fetchChatMessages() {
+            const selectedUser = document.getElementById('userSelector').value;
+            
+            // If no user selected, fetch all messages and populate user selector
+            if (!selectedUser) {
+                fetch('../chatbot/api.php?action=get_admin_messages&username=' + encodeURIComponent(adminUsername))
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Chat messages:', data);
+                        if (data.success && data.messages) {
+                            // Extract unique usernames (except admin)
+                            const uniqueUsers = new Set();
+                            data.messages.forEach(msg => {
+                                if (msg.username !== adminUsername) {
+                                    uniqueUsers.add(msg.username);
+                                } else if (msg.receiver !== adminUsername) {
+                                    uniqueUsers.add(msg.receiver);
+                                }
+                            });
+                            
+                            // Populate user selector
+                            const userSelector = document.getElementById('userSelector');
+                            userSelector.innerHTML = '<option value="">-- Select a user to chat with --</option>';
+                            uniqueUsers.forEach(user => {
+                                const option = document.createElement('option');
+                                option.value = user;
+                                option.textContent = user;
+                                userSelector.appendChild(option);
+                            });
+                            
+                            // Show welcome message if no user selected
+                            const chatMessages = document.getElementById('chatMessages');
+                            chatMessages.innerHTML = '<div class="message bot"><div class="message-content"><p>Select a user from the dropdown to view and chat with them.</p></div></div>';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching chat messages:', error);
+                    });
+            } else {
+                // Load messages for selected user
+                fetch('../chatbot/api.php?action=get_admin_messages&username=' + encodeURIComponent(adminUsername))
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('Chat messages:', data);
+                        if (data.success && data.messages) {
+                            const chatMessages = document.getElementById('chatMessages');
+                            chatMessages.innerHTML = '';
+                            
+                            // Filter messages for selected user
+                            const filteredMessages = data.messages.filter(msg => {
+                                return (msg.username === selectedUser || msg.receiver === selectedUser);
+                            });
+                            
+                            filteredMessages.forEach(msg => {
+                                const isSentMessage = msg.username === adminUsername;
+                                const messageType = isSentMessage ? 'user' : 'bot';
+                                let labeledMessage = msg.chat;
+                                
+                                if (!isSentMessage) {
+                                    labeledMessage = labeledMessage;
+                                }
+                                
+                                addMessage(labeledMessage, messageType);
+                            });
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error fetching chat messages:', error);
+                    });
+            }
+        }
+
+        // Close Chat
+        function closeChat() {
+            const chatWindow = document.getElementById('chatWindow');
+            const chatBubbleBtn = document.getElementById('chatBubbleBtn');
+            
+            chatWindow.classList.remove('active');
+            chatBubbleBtn.classList.remove('active');
+        }
+
+        // Send Message
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const selectedUser = document.getElementById('userSelector').value;
+            const message = input.value.trim();
+
+            if (!message) {
+                alert('Please type a message');
+                return;
+            }
+
+            if (!selectedUser) {
+                alert('Please select a user to chat with');
+                return;
+            }
+
+            fetch('../chatbot/api.php?action=save_admin_message', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: adminUsername,
+                    chat: message,
+                    receiver: selectedUser
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Message saved:', data);
+                if (data.success) {
+                    addMessage(message, 'user');
+                    input.value = '';
+                }
+            })
+            .catch(error => {
+                console.error('Error saving message:', error);
+            });
+        }
+
+        // Handle Enter Key
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        // Initialize user selector listener
+        document.addEventListener('DOMContentLoaded', function() {
+            const userSelector = document.getElementById('userSelector');
+            if (userSelector) {
+                userSelector.addEventListener('change', function() {
+                    fetchChatMessages();
+                });
+            }
+        });
+    </script>
+    
     <script>
         // Sales Chart
         const ctx = document.getElementById('salesChart').getContext('2d');
@@ -221,7 +595,7 @@ for ($i = 6; $i >= 0; $i--) {
             data: {
                 labels: salesData.map(d => d.date),
                 datasets: [{
-                    label: 'Sales (Ã¢â€šÂ±)',
+                    label: 'Sales (₱)',
                     data: salesData.map(d => d.total),
                     borderColor: '#FEC700',
                     backgroundColor: 'rgba(254, 199, 0, 0.1)',
@@ -244,5 +618,47 @@ for ($i = 6; $i >= 0; $i--) {
             }
         });
     </script>
+    
+    <!-- Chat Widget HTML -->
+    <div class="chatbot-widget">
+        <button class="chat-bubble-btn" id="chatBubbleBtn" onclick="toggleChat()">
+            <i class="fas fa-comments"></i>
+        </button>
+
+        <div class="chat-window" id="chatWindow">
+            <div class="chat-header">
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <h3 style="margin: 0;">Chat with User</h3>
+                    <button class="chat-close-btn" onclick="closeChat()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <select id="userSelector" style="width: 100%; padding: 8px; margin-top: 10px; border-radius: 4px; border: 1px solid #ccc;">
+                    <option value="">-- Select a user to chat with --</option>
+                </select>
+            </div>
+
+            <div class="chat-messages" id="chatMessages">
+                <div class="message bot">
+                    <div class="message-content">
+                        <p>Welcome to Admin Chat</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-section">
+                <input 
+                    type="text" 
+                    class="chat-input" 
+                    id="chatInput" 
+                    placeholder="Type your message..." 
+                    onkeypress="handleKeyPress(event)"
+                >
+                <button class="chat-send-btn" onclick="sendMessage()">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

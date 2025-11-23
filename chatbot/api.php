@@ -29,6 +29,22 @@ try {
             logQuickReply();
             break;
             
+        case 'save_message':
+            insertMessage();
+            break;
+            
+        case 'get_chat_messages':
+            getChatMessages();
+            break;
+            
+        case 'save_admin_message':
+            saveAdminMessage();
+            break;
+            
+        case 'get_admin_messages':
+            getAdminMessages();
+            break;
+            
         case 'get_order':
             getOrderTracking();
             break;
@@ -222,5 +238,201 @@ function getSessionMessages() {
         'success' => true,
         'messages' => $messages
     ]);
+}
+
+function insertMessage() {
+    global $conn;
+    
+    $data = json_decode(file_get_contents('php://input'), true);
+    
+    if (!isset($data['username']) || !isset($data['chat'])) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Missing required fields: username, chat'
+        ]);
+        return;
+    }
+    
+    $username = (string)$data['username'];
+    // echo json_encode([
+    //         'success' => false,
+    //         'error' => 'Database error: ' . $username
+    //     ]);
+    // return;
+    $chat = (string)$data['chat'];
+    $receiver = "admin";
+    
+    $stmt = $conn->prepare("
+        INSERT INTO chat (username, chat, receiver, created_at)
+        VALUES (?, ?, ?, NOW())
+    ");
+    
+    if (!$stmt) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Database error: ' . $conn->error
+        ]);
+        return;
+    }
+    
+    $stmt->bind_param("sss", $username, $chat, $receiver);
+    
+    if ($stmt->execute()) {
+        echo json_encode([
+            'success' => true,
+            'message_id' => $conn->insert_id,
+            'message' => 'Message saved successfully'
+        ]);
+    } else {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Failed to insert message: ' . $stmt->error
+        ]);
+    }
+    
+    $stmt->close();
+}
+
+function getChatMessages() {
+    global $conn;
+    
+    $username = $_GET['username'] ?? '';
+    
+    if (empty($username)) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Username is required'
+        ]);
+        return;
+    }
+    
+    $stmt = $conn->prepare("
+        SELECT id, chat, username, receiver, created_at
+        FROM chat
+        WHERE username = ? OR receiver = ?
+        ORDER BY created_at ASC
+    ");
+    
+    if (!$stmt) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Database error: ' . $conn->error
+        ]);
+        return;
+    }
+    
+    $stmt->bind_param("ss", $username, $username);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $messages = [];
+    while ($row = $result->fetch_assoc()) {
+        $messages[] = $row;
+    }
+    
+    echo json_encode([
+        'success' => true,
+        'messages' => $messages,
+        'count' => count($messages)
+    ]);
+    
+    $stmt->close();
+}
+
+function saveAdminMessage() {
+    global $conn;
+    
+    $data = json_decode(file_get_contents('php://input'), true);
+    
+    if (!isset($data['username']) || !isset($data['chat']) || !isset($data['receiver'])) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Missing required fields: username, chat, receiver'
+        ]);
+        return;
+    }
+    
+    $username = (string)$data['username'];  // admin username
+    $chat = (string)$data['chat'];
+    $receiver = (string)$data['receiver'];   // target user
+    
+    $stmt = $conn->prepare("
+        INSERT INTO chat (username, chat, receiver, created_at)
+        VALUES (?, ?, ?, NOW())
+    ");
+    
+    if (!$stmt) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Database error: ' . $conn->error
+        ]);
+        return;
+    }
+    
+    $stmt->bind_param("sss", $username, $chat, $receiver);
+    
+    if ($stmt->execute()) {
+        echo json_encode([
+            'success' => true,
+            'message_id' => $conn->insert_id,
+            'message' => 'Message sent successfully'
+        ]);
+    } else {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Failed to send message: ' . $stmt->error
+        ]);
+    }
+    
+    $stmt->close();
+}
+
+function getAdminMessages() {
+    global $conn;
+    
+    $adminUsername = $_GET['username'] ?? '';
+    
+    if (empty($adminUsername)) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Admin username is required'
+        ]);
+        return;
+    }
+    
+    // Get all messages where:
+    // 1. Admin is the receiver (messages FROM users)
+    // 2. Admin is the sender (messages TO users)
+    $stmt = $conn->prepare("
+        SELECT id, chat, username, receiver, created_at
+        FROM chat
+        WHERE receiver = ? OR username = ?
+        ORDER BY created_at ASC
+    ");
+    
+    if (!$stmt) {
+        echo json_encode([
+            'success' => false,
+            'error' => 'Database error: ' . $conn->error
+        ]);
+        return;
+    }
+    
+    $stmt->bind_param("ss", $adminUsername, $adminUsername);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    $messages = [];
+    while ($row = $result->fetch_assoc()) {
+        $messages[] = $row;
+    }
+    
+    echo json_encode([
+        'success' => true,
+        'messages' => $messages,
+        'count' => count($messages)
+    ]);
+    
+    $stmt->close();
 }
 ?>

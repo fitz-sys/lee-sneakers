@@ -1833,6 +1833,7 @@ let currentProduct = null;
 let selectedVariant = null;
 let selectedSize = null;
 const isLoggedIn = <?php echo $is_logged_in ? 'true' : 'false'; ?>;
+const username = <?php echo $is_logged_in ? json_encode($_SESSION['username']) : 'null'; ?>;
 
 // Page State Management
 let currentView = 'home'; // 'home' or 'section'
@@ -2477,6 +2478,7 @@ function scrollToTop() {
 // NEW: Function to explicitly OPEN the chat
 // NEW: Toggle function (Replaces openChat)
 function toggleChat() {
+    console.log('Toggling chat window');
     const chatWindow = document.getElementById('chatWindow');
     const chatBubbleBtn = document.getElementById('chatBubbleBtn');
     
@@ -2489,7 +2491,36 @@ function toggleChat() {
         // If not active, open it
         chatWindow.classList.add('active');
         chatBubbleBtn.classList.add('active');
+        
+        // Fetch chat messages when opening
+        if (isLoggedIn && username) {
+            const chats = fetchChatMessages();
+            console.log(chats);
+        }
     }
+}
+
+// Fetch chat messages from database
+function fetchChatMessages() {
+    fetch('../chatbot/api.php?action=get_chat_messages&username=' + encodeURIComponent(username))
+        .then(response => response.json())
+        .then(data => {
+            console.log('Chat messages:', data);
+            if (data.success && data.messages) {
+                // Clear existing messages (except the greeting)
+                const chatMessages = document.getElementById('chatMessages');
+                const existingMessages = chatMessages.querySelectorAll('.message:not(.bot)');
+                existingMessages.forEach(msg => msg.remove());
+                
+                // Add fetched messages in order (oldest to newest)
+                data.messages.forEach(msg => {
+                    addMessage(msg.chat, 'user');
+                });
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching chat messages:', error);
+        });
 }
 
 function closeChat() {
@@ -2600,7 +2631,26 @@ function closeChat() {
     const input = document.getElementById('chatInput');
     const message = input.value.trim();
 
+    // console.log('User message:', message);
+    // console.log(username);
+
     if (!message) return;
+
+    fetch('../chatbot/api.php?action=save_message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+        username: username,
+        chat: message
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Message saved:', data);
+    })
+    .catch(error => {
+        console.error('Error saving message:', error);
+    });
 
     // Add user message
     addMessage(message, 'user');
